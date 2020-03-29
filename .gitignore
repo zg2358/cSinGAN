@@ -1,1 +1,8 @@
+# Don't track content of these folders
+Output/
+TrainedModels/
+__pycache__/
+.idea
+
+# my folders that don't track
 venv/

@@ -18,30 +18,26 @@ def weights_init(m):
     elif classname.find('Norm') != -1:
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
-   
+
 class WDiscriminator(nn.Module):
     def __init__(self, opt):
         super(WDiscriminator, self).__init__()
         self.is_cuda = torch.cuda.is_available()
         N = int(opt.nfc)
-        self.head = ConvBlock(opt.nc_im,N,opt.ker_size,opt.padd_size,1)
+        self.head = ConvBlock(opt.nc_im+3,N,opt.ker_size,opt.padd_size,1)
         self.body = nn.Sequential()
         for i in range(opt.num_layer-2):
             N = int(opt.nfc/pow(2,(i+1)))
             block = ConvBlock(max(2*N,opt.min_nfc),max(N,opt.min_nfc),opt.ker_size,opt.padd_size,1)
             self.body.add_module('block%d'%(i+1),block)
-        self.tail = nn.Conv2d(max(N,opt.min_nfc),1,kernel_size=opt.ker_size,stride=1,padding=opt.padd_size)
+        self.tail = nn.Conv2d(max(N,opt.min_nfc),1,kernel_size=opt.ker_size,stride=1,padding=opt.padd_size+3)
 
-    def forward(self,x,y):
-        ind = int((y.shape[2]-x.shape[2])/2)
-        y = y[:,:,ind:(y.shape[2]-ind),ind:(y.shape[3]-ind)]
+    def forward(self,x,s):
+        x = torch.cat([x,s],1)
         x = self.head(x)
         x = self.body(x)
         x = self.tail(x)
-        y = self.head(y)
-        y = self.body(y)
-        y = self.tail(y)
-        return x+y
+        return x
 
 
 class GeneratorConcatSkip2CleanAdd(nn.Module):
@@ -49,7 +45,7 @@ class GeneratorConcatSkip2CleanAdd(nn.Module):
         super(GeneratorConcatSkip2CleanAdd, self).__init__()
         self.is_cuda = torch.cuda.is_available()
         N = opt.nfc
-        self.head = ConvBlock(opt.nc_im,N,opt.ker_size,opt.padd_size,1) #GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
+        self.head = ConvBlock(opt.nc_im+3,N,opt.ker_size,opt.padd_size,1) #GenConvTransBlock(opt.nc_z,N,opt.ker_size,opt.padd_size,opt.stride)
         self.body = nn.Sequential()
         for i in range(opt.num_layer-2):
             N = int(opt.nfc/pow(2,(i+1)))
@@ -59,10 +55,11 @@ class GeneratorConcatSkip2CleanAdd(nn.Module):
             nn.Conv2d(max(N,opt.min_nfc),opt.nc_im,kernel_size=opt.ker_size,stride =1,padding=opt.padd_size),
             nn.Tanh()
         )
-    def forward(self,x,y):
+    def forward(self,x,y,s):
         x = self.head(x)
         x = self.body(x)
         x = self.tail(x)
+        x = torch.cat([x, s], 1)
         ind = int((y.shape[2]-x.shape[2])/2)
         y = y[:,:,ind:(y.shape[2]-ind),ind:(y.shape[3]-ind)]
         return x+y

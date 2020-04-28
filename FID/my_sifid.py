@@ -18,10 +18,6 @@ GAN_DIR = "C:/Users/samtu/Desktop/4995_DL/cSinGAN/FID/sinGANimgs"
 IMG_NAMES = ["balloons", "birds", "zebra", "colusseum", "starry_night"]
 SUFFIX = "png"
 
-
-
-
-
 '''
 Find FID
 '''

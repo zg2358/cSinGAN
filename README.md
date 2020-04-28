@@ -13,6 +13,6 @@ Image generation combined with deep learning has become a hottopic these years. 
 
 
 
- ![](imgs/D1.PNG)
+![](imgs/D1.png)
 
 

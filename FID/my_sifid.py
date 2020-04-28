@@ -1,4 +1,3 @@
-# example of calculating the frechet inception distance in Keras
 import numpy
 from numpy import cov
 from numpy import trace
@@ -20,35 +19,36 @@ IMG_NAMES = ["balloons", "birds", "zebra", "colusseum", "starry_night"]
 SUFFIX = "png"
 
 
-# scale an array of images to a new size
-def scale_images(images, new_shape):
-	images_list = list()
+
+
+
+'''
+Find FID
+'''
+def find_FID(model, real_img, fake_img):
+	# find activations of both real and fake images
+	activation_real = model.predict(real_img)
+	activation_fake = model.predict(fake_img)
+	# find mean and covariance of real and fake images
+	u_real, sigma_real = activation_real.mean(axis=0), cov(activation_real, rowvar=False)
+	u_fake, sigma_fake = activation_fake.mean(axis=0), cov(activation_fake, rowvar=False)
+	# Use formula to find FID score
+	summed_squared_diff = numpy.sum((u_real - u_fake) ** 2.0)
+	c_mean = sqrtm(sigma_real.dot(sigma_fake))
+	if iscomplexobj(c_mean) == True:
+		c_mean = c_mean.real
+	return summed_squared_diff + trace(sigma_real + sigma_fake - 2.0 * c_mean)
+
+
+'''
+Scale image to desired shape
+'''
+def change_img_dims(images, desired_dim):
+	result = []
 	for image in images:
-		# resize with nearest neighbor interpolation
-		new_image = resize(image, new_shape, 0)
-		# store
-		images_list.append(new_image)
-	return asarray(images_list)
-
-
-# calculate frechet inception distance
-def calculate_fid(model, images1, images2):
-	# calculate activations
-	act1 = model.predict(images1)
-	act2 = model.predict(images2)
-	# calculate mean and covariance statistics
-	mu1, sigma1 = act1.mean(axis=0), cov(act1, rowvar=False)
-	mu2, sigma2 = act2.mean(axis=0), cov(act2, rowvar=False)
-	# calculate sum squared difference between means
-	ssdiff = numpy.sum((mu1 - mu2) ** 2.0)
-	# calculate sqrt of product between cov
-	covmean = sqrtm(sigma1.dot(sigma2))
-	# check and correct imaginary numbers from sqrt
-	if iscomplexobj(covmean):
-		covmean = covmean.real
-	# calculate score
-	fid = ssdiff + trace(sigma1 + sigma2 - 2.0 * covmean)
-	return fid
+		new_image = resize(image, desired_dim, 0)
+		result += [new_image]
+	return asarray(result)
 
 
 # 1 on 1 comparison between pairs of real images and fake images
@@ -68,8 +68,8 @@ def main():
 		print(IMG_NAME + ' images loaded')
 		
 		# resize images
-		img_real = scale_images(img_real, (300, 300, 3))
-		img_fake = scale_images(img_fake, (300, 300, 3))
+		img_real = change_img_dims(img_real, (300, 300, 3))
+		img_fake = change_img_dims(img_fake, (300, 300, 3))
 		print("Images scaled to desired dimensions")
 		
 		# pre-process images
@@ -78,7 +78,7 @@ def main():
 		print("Images pre-processed")
 		
 		# fid between real and fake images
-		fid = calculate_fid(model, img_real, img_fake)
+		fid = find_FID(model, img_real, img_fake)
 		print('FID of ' + IMG_NAME + ': %.3f' % fid)
 		
 		fid_results += [round(fid, 5)]
@@ -110,7 +110,7 @@ def main1():
 		print("Real image loaded")
 		
 		# resize real image
-		img_real = scale_images(img_real, (300, 300, 3))
+		img_real = change_img_dims(img_real, (300, 300, 3))
 		print("Real image resized")
 		
 		# pre-process real image
@@ -129,7 +129,7 @@ def main1():
 			print(filename + ' fake image loaded')
 			
 			# resize fake image
-			img_fake = scale_images(img_fake, (300, 300, 3))
+			img_fake = change_img_dims(img_fake, (300, 300, 3))
 			print("Fake image" + filename + " scaled to desired dimensions")
 			
 			# pre-process images
@@ -137,7 +137,7 @@ def main1():
 			print("Fake image " + filename + " pre-processed")
 			
 			# fid between real and fake images
-			fid = calculate_fid(model, img_real, img_fake)
+			fid = find_FID(model, img_real, img_fake)
 			print("FID between real and fake image ", filename, ": ", fid)
 			
 			current_fid_result += [round(fid, 5)]
